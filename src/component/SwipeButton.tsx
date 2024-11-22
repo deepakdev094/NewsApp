@@ -1,27 +1,31 @@
 import React from 'react';
 import {
     Image,
+    ImageSourcePropType,
+    ImageStyle,
+    StyleProp,
     StyleSheet,
     TouchableOpacity,
 } from 'react-native';
 import { wp } from '../utils/responsive';
-import Assets from '../utils/assets';
 
 type SwipeButtonProps = {
     rowMap: any;
     index: number;
+    icon: ImageSourcePropType;
     handleOnPress: (rowMap: any, index: number) => void;
+    iconStyle: StyleProp<ImageStyle>
 };
 
 const SwipeButton = (props: SwipeButtonProps) => {
 
-    const { rowMap, index, handleOnPress } = props;
+    const { rowMap, index, icon, handleOnPress, iconStyle } = props;
 
     return (
         <TouchableOpacity
             style={styles.actionButton}
             onPress={() => handleOnPress(rowMap, index)}               >
-            <Image source={Assets.pinIcon} style={styles.pinIconWrapper} />
+            <Image source={icon} style={iconStyle} />
         </TouchableOpacity >
     );
 };
@@ -33,15 +37,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         width: (wp * 15) / 100,
         height: (wp * 25) / 100,
-    },
-    pinIconWrapper: {
-        width: (wp * 7) / 100,
-        height: (wp * 7) / 100,
-    },
-    deleteIconWrapper: {
-        width: (wp * 8) / 100,
-        height: (wp * 8) / 100,
-    },
+    }
 });
 
 

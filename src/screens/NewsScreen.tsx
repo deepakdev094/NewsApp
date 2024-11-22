@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Alert, BackHandler, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SwipeListView } from "react-native-swipe-list-view";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Colors from "../utils/colors";
@@ -13,22 +13,53 @@ import SwipeButton from "../component/SwipeButton";
 const NewsScreen = () => {
 
     const [loading, setLoading] = useState(false);
-    const [headlines, setHeadlines] = useState([]);
+    const [headlines, setHeadlines] = useState<any>([]);
     const [pinnedNews, setPinnedNews] = useState([]);
+
+    const timerRef: any = useRef(null);
 
     useEffect(() => {
         loadHeadlines();
+        startTimer();
 
-        // Set time interval execute every 10 seconds...
-        const intervalId = setInterval(() => {
-            handleLatestHeadlines();
-        }, 10000);
+        const handleBackPress = () => {
+            // Show an alert dialog
+            Alert.alert(
+                'Exit App',
+                'Are you sure you want to exit the app?',
+                [
+                    { text: 'Cancel', style: 'cancel' }, // Do nothing on cancel
+                    { text: 'Yes', onPress: () => BackHandler.exitApp() }, // Exit the app
+                ],
+                { cancelable: true }
+            );
+            return true; // Prevent default back button behavior
+        };
 
-        // Cleanup the interval when the component unmounts
-        return () => clearInterval(intervalId);
+        // Add the back press listener
+        BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+
+        // Cleanup the listener on component unmount
+        return () => {
+            clearInterval(timerRef.current);
+            BackHandler.removeEventListener('hardwareBackPress', handleBackPress);
+        };
     }, []);
 
+    const startTimer = () => {
+        timerRef.current = setInterval(() => {
+            handleLatestHeadlines();
+        }, 10000);
+    };
+
+    const resetTimer = () => {
+        clearInterval(timerRef.current);
+        startTimer();
+    };
+
+
     const loadHeadlines = async () => {
+
         setPinnedNews([]);
         setLoading(true);
         const stored: any = await fetchHeadlines();
@@ -63,8 +94,8 @@ const NewsScreen = () => {
     }
 
     const handleDelete = (rowMap: any, index: number) => {
-        let result: any = headlines.filter((item: any, i: number) => i != index);
-        let object: any = headlines.find((item: any, i: number) => i === index);
+        let result: HeadlineProps[] = headlines.filter((item: any, i: number) => i != index);
+        let object: HeadlineProps = headlines.find((item: any, i: number) => i === index);
         if (object.status == true) {
             setPinnedNews([]);
         }
@@ -73,33 +104,50 @@ const NewsScreen = () => {
     }
 
     const handleLatestHeadlines = async () => {
+
+        let localHeadlines: HeadlineProps[] = [];
+        let pinnedNewsList: HeadlineProps[] = [];
+
+        setHeadlines((prev: any) => {
+            localHeadlines = prev;
+            return prev;
+        });
+
         const result: any = await AsyncStorage.getItem('latestHeadlines');
         const headlinesList: any = result ? JSON.parse(result) : [];
         let firstFiveList: any = headlinesList.slice(0, 5);
+
         let afterFive: any = headlinesList.slice(5);
-        const length = pinnedNews.length;
+
+        setPinnedNews((prev: any) => {
+            pinnedNewsList = prev;
+            return prev;
+        });
+
+        const length: number = pinnedNewsList.length;
         if (afterFive.length) {
             await AsyncStorage.setItem('latestHeadlines', JSON.stringify(afterFive));
         } else {
             loadHeadlines();
         }
+
         if (length != 0) {
-            let headlinesList: any = headlines.slice(1);
+            let headlinesList: HeadlineProps[] = localHeadlines.slice(1);
             let length = headlinesList.length;
-            const afterFiveList: any = headlinesList.slice(0, (length > 5) ? 4 : length - 1);
-            const records: any = [...firstFiveList, ...afterFiveList]
-            const updatedRecords = records.map((record: any) => ({
+            const afterFiveList: HeadlineProps[] = headlinesList.slice(0, (length > 5) ? 4 : length - 1);
+            const records: HeadlineProps[] = [...firstFiveList, ...afterFiveList]
+            const updatedRecords: HeadlineProps[] = records.map((record: any) => ({
                 ...record,
                 status: false
             }));
-            const pinnedArray: any = [{ ...pinnedNews, status: true }];
-            const result: any = [...pinnedArray, ...updatedRecords];
+            const pinnedArray: any = [{ ...pinnedNewsList, status: true }];
+            const result: HeadlineProps[] = [...pinnedArray, ...updatedRecords];
             setHeadlines(result);
         } else {
-            let headlinesList: any = headlines;
+            let headlinesList: HeadlineProps[] = localHeadlines;
             let length = headlinesList.length;
-            const afterFiveList: any = headlinesList.slice(0, (length > 5) ? 4 : length - 1);
-            const result: any = [...firstFiveList, ...afterFiveList];
+            const afterFiveList: HeadlineProps[] = headlinesList.slice(0, (length > 5) ? 4 : length - 1);
+            const result: HeadlineProps[] = [...firstFiveList, ...afterFiveList];
             setHeadlines(result);
         }
     }
@@ -108,7 +156,10 @@ const NewsScreen = () => {
         <SafeAreaView style={styles.container}>
             <View style={styles.appBarWrapper}>
                 <Text style={styles.headingWrapper}>News Headlines</Text>
-                <TouchableOpacity style={styles.topNewsButtonWrapper} onPress={() => { handleLatestHeadlines() }}>
+                <TouchableOpacity style={styles.topNewsButtonWrapper} onPress={() => {
+                    resetTimer()
+                    handleLatestHeadlines()
+                }}>
                     <Text style={styles.topNewsTextWrapper}>Top News</Text>
                 </TouchableOpacity>
             </View>
@@ -127,6 +178,7 @@ const NewsScreen = () => {
                         {
                             headlines.length != 0 &&
                             <SwipeListView
+                                contentContainerStyle={{ paddingBottom: wp * 4 / 100 }}
                                 data={headlines}
                                 renderItem={({ item }: { item: HeadlineProps }) => {
                                     return (
@@ -136,6 +188,8 @@ const NewsScreen = () => {
                                 renderHiddenItem={(data, rowMap) => (
                                     <View style={styles.rowBack}>
                                         <SwipeButton
+                                            iconStyle={styles.pinIconWrapper}
+                                            icon={Assets.pinIcon}
                                             handleOnPress={(rowMap, index) => {
                                                 handlePin(rowMap, index)
                                             }}
@@ -143,6 +197,8 @@ const NewsScreen = () => {
                                             index={data.index}
                                         />
                                         <SwipeButton
+                                            iconStyle={styles.deleteIconWrapper}
+                                            icon={Assets.deleteIcon}
                                             handleOnPress={(rowMap, index) => {
                                                 handleDelete(rowMap, index)
                                             }}
@@ -164,7 +220,7 @@ const NewsScreen = () => {
                     <Text style={styles.noDataFound}>NO Data Found</Text>
                 </View>
             }
-        </SafeAreaView>
+        </SafeAreaView >
     )
 }
 
@@ -231,12 +287,5 @@ const styles = StyleSheet.create({
         borderRadius: wp * 2 / 100,
         marginHorizontal: (wp * 3) / 100,
         marginVertical: (wp * 1) / 100,
-    },
-    actionButton: {
-        borderRadius: wp * 2 / 100,
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: (wp * 15) / 100,
-        height: (wp * 25) / 100,
     }
 });
