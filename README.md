@@ -76,4 +76,24 @@ To learn more about React Native, take a look at the following resources:
 - [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
 - [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
 - [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.z
+
+  - Startup
+   - On launching the application, a Splash Screen is displayed as the initial interface.
+    Once the splash screen completes, the user is navigated to the News Screen.
+    - News Screen Functionality
+        - Fetch Top Headlines:
+            The app integrates with the News API to fetch the top 100 headlines.
+            The fetched data is stored in the local storage for offline access using mechanisms like AsyncStorage or a local database.
+        - Initial Display:
+            The first 10 news items are displayed in a List View component for the user.
+            News Management Features
+        - Pinning News Headlines:
+            Users can pin a single news headline. Only one headline can be pinned at any given time. Attempting to pin another will automatically unpin the previously pinned headline.
+        - Deleting News Headlines:
+            Users can delete news headlines individually, which removes them from the displayed list.
+            Dynamic Data Loading
+        - Incremental Updates:
+            Every 10 seconds, the application retrieves the next 5 headlines from local storage and appends them to the displayed list.
+        -  Fetching New Headlines:
+            The "Top News" button refreshes the displayed list with a new set of top headlines, ensuring the user sees the most recent or relevant news.
